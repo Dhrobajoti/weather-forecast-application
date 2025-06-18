@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Forecast</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        h1 {
+            color: #1976D2;
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 500;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .form-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        label {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        input[type="text"] {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            flex-grow: 1;
+            max-width: 200px;
+        }
+        
+        button {
+            background-color: #1976D2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #1565C0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background-color: #1976D2;
+            color: white;
+            font-weight: 500;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .weather-footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .fetch-time {
+            font-style: italic;
+            color: #1976D2;
+            margin-bottom: 15px;
+        }
+        
+        .material-icons {
+            vertical-align: middle;
+            font-size: 20px;
+        }
+		
+		.alert {
+		padding: 12px;
+		border-radius: 4px;
+		margin-bottom: 20px;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		}
+		
+		.alert-error {
+		background-color: #ffebee;
+		color: #c62828;
+		border-left: 4px solid #c62828;
+		}
+		
+		.alert-success {
+		background-color: #e8f5e9;
+		color: #2e7d32;
+		border-left: 4px solid #2e7d32;
+		}
+
+        /* Button Styles */
+        .action-buttons {
+            margin-top: 20px;
+            padding: 15px;
+        }
+
+        .save-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .graph-btn {
+            background-color: #9C27B0; /* Purple */
+            color: white;
+        }
+
+        .save-btn:hover {
+            background-color: #3e8e41;
+        }
+
+        .graph-btn:hover {
+            background-color: #7B1FA2;
+        }
+
+        /* Graph Image Styling */
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        /* DB Button Style */
+        .db-btn {
+            background-color: #FF9800; /* Orange */
+            color: white;
+        }
+        .db-btn:hover {
+            background-color: #F57C00;
+        }
+        /* Export Button Style */
+        .export-btn {
+            background-color: #607D8B;
+            color: white;
+        }
+        .export-btn.csv {
+            background-color: #4CAF50; /* Green */
+        }
+        .export-btn.excel {
+            background-color: #2196F3; /* Blue */
+        }
+        .export-btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>
+            <i class="material-icons">cloud</i>
+            Weather Forecast Application
+        </h1>
+        
+        <!-- Success and Error Messages -->
+        <div th:if="${message}" class="alert alert-success">
+            <i class="material-icons">check_circle</i>
+            <span th:text="${message}"></span>
+        </div>
+        <div th:if="${error}" class="alert alert-error">
+            <i class="material-icons">error</i>
+            <span th:text="${error}"></span>
+        </div>
+
+        <div class="card">
+            <form method="POST" action="/">
+                <div class="form-group">
+                    <label>
+                        <i class="material-icons">location_on</i>
+                        Latitude:
+                    </label>
+                    <input type="text" name="latitude" required placeholder="e.g. 19.1116">
+                    
+                    <label>
+                        <i class="material-icons">explore</i>
+                        Longitude:
+                    </label>
+                    <input type="text" name="longitude" required placeholder="e.g. 73.0094">
+                    
+                    <button type="submit">
+                        <i class="material-icons">search</i>
+                        Get Forecast
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div th:if="${data != null and !data.empty}" class="card">
+            <h2>
+                <i class="material-icons">calendar_today</i>
+                Forecast Data 
+                <span class="fetch-time" th:text="'@ ' + ${fetchTime}"></span>
+            </h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th><i class="material-icons">access_time</i> Fetch Time</th>
+                        <th><i class="material-icons">location_on</i> Latitude</th>
+                        <th><i class="material-icons">explore</i> Longitude</th>
+                        <th><i class="material-icons">date_range</i> Date</th>
+                        <th><i class="material-icons">arrow_upward</i> Max Temp (°C)</th>
+                        <th><i class="material-icons">arrow_downward</i> Min Temp (°C)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="row : ${data}">
+                        <td th:text="${row.fetchTime}"></td>
+                        <td th:text="${row.latitude}"></td>
+                        <td th:text="${row.longitude}"></td>
+                        <td th:text="${row.date}"></td>
+                        <td th:text="${row.maxTemp}"></td>
+                        <td th:text="${row.minTemp}"></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Add this after the table and before the footer for Different Microservices-->
+            <div th:if="${hasData}" class="card action-buttons">
+                <div style="display: flex; gap: 15px;"> 
+                                      
+                    <!-- Plot Graph Form  Section-->
+                    <form method="POST" th:action="@{/plot-graph}" th:if="${hasData}">
+                        <!-- Ensure each item has the correct name="data" parameter -->
+                        <div th:each="item : ${data}">
+                            <input type="hidden" 
+                                name="data" 
+                                th:value="|fetchTime=${item.fetchTime},latitude=${item.latitude},longitude=${item.longitude},date=${item.date},maxTemp=${item.maxTemp},minTemp=${item.minTemp}|">
+                        </div>
+                        <button type="submit" class="graph-btn">
+                            <i class="material-icons">show_chart</i> Plot Graph
+                        </button>
+                    </form>
+
+                    <!-- Save to CSV Form  Section-->
+                    <form method="POST" th:action="@{/save-csv}">
+                        <div th:each="item : ${data}">
+                            <input type="hidden" 
+                                name="data" 
+                                th:value="|fetchTime=${item.fetchTime},latitude=${item.latitude},longitude=${item.longitude},date=${item.date},maxTemp=${item.maxTemp},minTemp=${item.minTemp}|">
+                        </div>
+                        <button type="submit" class="save-btn">
+                            <i class="material-icons">storage</i> Store in CSV
+                        </button>
+                    </form>
+
+                    <!--Save to SQLite DB Form  Section-->
+                    <form method="POST" th:action="@{/save-db}" th:if="${hasData}">
+                        <div th:each="item : ${data}">
+                            <input type="hidden" 
+                                name="data" 
+                                th:value="|fetchTime=${item.fetchTime},latitude=${item.latitude},longitude=${item.longitude},date=${item.date},maxTemp=${item.maxTemp},minTemp=${item.minTemp}|">
+                        </div>
+                        <button type="submit" class="db-btn">
+                            <i class="material-icons">storage</i> Store in SQLite
+                        </button>
+                    </form>
+
+                    <!-- Export as CSV Form Section -->
+                    <form method="POST" th:action="@{/export-csv}">
+                        <div th:each="item : ${data}">
+                            <input type="hidden" 
+                                name="data" 
+                                th:value="|fetchTime=${item.fetchTime},latitude=${item.latitude},longitude=${item.longitude},date=${item.date},maxTemp=${item.maxTemp},minTemp=${item.minTemp}|">
+                        </div>
+                        <button type="submit" class="export-btn csv">
+                            <i class="material-icons">file_download</i> Export CSV
+                        </button>
+                    </form>
+
+                    <!-- Export as Excel Form Section -->
+                    <form method="POST" th:action="@{/export-excel}">
+                        <div th:each="item : ${data}">
+                            <input type="hidden" 
+                                name="data" 
+                                th:value="|fetchTime=${item.fetchTime},latitude=${item.latitude},longitude=${item.longitude},date=${item.date},maxTemp=${item.maxTemp},minTemp=${item.minTemp}|">
+                        </div>
+                        <button type="submit" class="export-btn excel">
+                            <i class="material-icons">file_download</i> Export Excel
+                        </button>
+                    </form>
+                    
+                </div>
+            </div>
+            <!-- Graph Display Area above footer Section -->
+            <div th:if="${plotData}" class="card">
+                <h2><i class="material-icons">show_chart</i> Temperature Trend</h2>
+                <img th:src="${plotData != null ? 'data:image/png;base64,' + plotData : ''}" 
+                    th:alt="${'Temperature Graph'}" 
+                    style="max-width: 100%; height: auto;">
+            </div>
+
+
+    <div class="weather-footer">
+        <i class="material-icons">code</i>
+        <span>Developed by Dhrobajoti Paul | Powered by Open-Meteo API</span>
+    </div>
+</body>
+</html>

@@ -1,0 +1,68 @@
+
+services:
+  frontend-gui:
+    image: frontend-gui
+    build:
+      context: ./frontend-gui
+    ports:
+      - "8080:8080"
+    environment:
+      - backend.api.url=http://backend-api:8081
+      - backend.graph.url=http://backend-graph:8082
+      - backend.csv.url=http://backend-csv:8083
+      - backend.db.url=http://backend-db:8084
+      - backend.exporter.url=http://backend-exporter:8085
+    depends_on:
+      - backend-api
+
+  backend-api:
+    image: backend-api
+    build:
+      context: ./backend-api
+    ports:
+      - "8081:8081"
+    environment:
+      - spring.cache.type=caffeine
+      - spring.cache.caffeine.spec=maximumSize=100,expireAfterWrite=1h
+      - TZ=Asia/Kolkata
+      - JAVA_TOOL_OPTIONS=-Duser.timezone=Asia/Kolkata
+
+
+  backend-graph:
+    image: backend-graph
+    build:
+      context: ./backend-graph
+    ports:
+      - "8082:8082"
+    environment:
+      - DJANGO_SETTINGS_MODULE=app.settings
+      - MPLBACKEND=Agg
+      - PYTHONUNBUFFERED=1
+
+
+  backend-csv:
+    image: backend-csv
+    build:
+      context: ./backend-csv
+    ports:
+      - "8083:8083"
+
+
+  backend-db:
+    image: backend-db
+    build:
+      context: ./backend-db
+    ports:
+      - "8084:8084"
+    environment:
+      - DJANGO_SETTINGS_MODULE=app.settings
+      - PYTHONUNBUFFERED=1
+      - SQLITE_TMPDIR=/tmp
+
+
+  backend-exporter:
+    image: backend-exporter
+    build:
+      context: ./backend-exporter
+    ports:
+      - "8085:8085" 
