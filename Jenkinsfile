@@ -3,10 +3,10 @@ pipeline {
 
     environment {
         DOCKER_REGISTRY = 'index.docker.io/v1/'
-        DOCKER_USERNAME = 'dhrobajoti' // Replace with your Docker Hub username
-        GIT_CREDENTIALS_ID = 'github-credentials'  // Replace with your GitHub credentials ID in Jenkins
-        DOCKER_CREDENTIALS_ID = 'docker-credentials' // Replace with your Docker Hub credentials ID in Jenkins
-        GIT_REPO = 'https://github.com/Dhrobajoti/weather-forecast-application.git' // Replace with your Git repository URL
+        DOCKER_USERNAME = 'dhrobajoti'
+        GIT_CREDENTIALS_ID = 'github-credentials'
+        DOCKER_CREDENTIALS_ID = 'docker-credentials'
+        GIT_REPO = 'https://github.com/Dhrobajoti/weather-forecast-application.git'
     }
 
     stages {
@@ -22,26 +22,49 @@ pipeline {
                     def services = ['frontend-gui', 'backend-api', 'backend-graph', 'backend-csv', 'backend-db', 'backend-exporter']
                     
                     services.each { service ->
-                        def imageName = "${DOCKER_USERNAME}/weatherforecastapplication-${service}:latest"
-                        echo "Building image: ${imageName}"
+                        stage("Build ${service}") {
+                            try {
+                                def imageName = "${DOCKER_USERNAME}/weatherforecastapplication-${service}:latest"
+                                echo "Building image: ${imageName}"
 
-                        //sh "docker build -t ${imageName} ./${service}"
-                        // Use docker.build() from Docker Pipeline plugin
-                        docker.build(imageName, "./${service}")
+                                // Build the image
+                                docker.build(imageName, "./${service}")
 
-                        withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
-                            sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USER --password-stdin"
+                                // Login to Docker Hub once before pushing all images
+                                if (service == services[0]) {
+                                    withCredentials([usernamePassword(
+                                        credentialsId: "${DOCKER_CREDENTIALS_ID}", 
+                                        passwordVariable: 'DOCKER_PASSWORD', 
+                                        usernameVariable: 'DOCKER_USER'
+                                    )]) {
+                                        sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USER --password-stdin"
+                                    }
+                                }
+
+                                // Push the image
+                                sh "docker push ${imageName}"
+                            } finally {
+                                // Cleanup after each service build
+                                echo "Cleaning up after ${service} build"
+                                sh """
+                                    docker rmi ${DOCKER_USERNAME}/weatherforecastapplication-${service}:latest || true
+                                    docker system prune -f --filter 'until=24h' || true
+                                """
+                            }
                         }
-
-                        sh "docker push ${imageName}"
                     }
                 }
             }
-        }    
+        }
 
-        stage('Cleanup Docker') {
+        stage('Final Cleanup') {
             steps {
-                sh 'docker image prune -f || true'
+                sh '''
+                    docker system prune -af || true
+                    docker builder prune -af || true
+                    docker volume prune -f || true
+                    df -h
+                '''
             }
         }
     }
@@ -49,6 +72,7 @@ pipeline {
     post {
         always {
             cleanWs()
+            sh 'docker system df' // Show docker disk usage
         }
     }
 }
