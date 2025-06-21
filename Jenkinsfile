@@ -48,7 +48,7 @@ pipeline {
                                 echo "Cleaning up after ${service} build"
                                 sh """
                                     docker rmi ${DOCKER_USERNAME}/weatherforecastapplication-${service}:latest || true
-                                    docker system prune -f --filter 'until=24h' || true
+                                    docker system prune -af || true
                                 """
                             }
                         }
