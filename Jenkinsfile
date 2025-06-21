@@ -111,7 +111,7 @@ def buildAndPushService(String service) {
         echo "Cleaning up after ${service} build"
         sh """
             docker rmi ${imageName} || true
-            docker system prune -f --filter 'until=24h' || true
+            docker system prune -af || true
         """
     }
 }
