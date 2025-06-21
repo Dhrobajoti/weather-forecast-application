@@ -25,7 +25,7 @@ pipeline {
                         def imageName = "${DOCKER_USERNAME}/weatherforecastapplication-${service}:latest"
                         echo "Building image: ${imageName}"
 
-                        sh "docker build -t ${imageName} ./${service}"
+                        sh "sudo docker build -t ${imageName} ./${service}"
 
                         withCredentials([usernamePassword(credentialsId: "${DOCKER_CREDENTIALS_ID}", passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
                             sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USER --password-stdin"
