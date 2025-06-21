@@ -1,6 +1,12 @@
 pipeline {
     agent any
 
+    options {
+        // This enables the classic stage view
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        timestamps()
+    }
+
     environment {
         DOCKER_REGISTRY = 'index.docker.io/v1/'
         DOCKER_USERNAME = 'dhrobajoti'
@@ -12,46 +18,42 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', credentialsId: "${env.GIT_CREDENTIALS_ID}", url: "${env.GIT_REPO}"
+                git branch: 'main', 
+                credentialsId: "${env.GIT_CREDENTIALS_ID}", 
+                url: "${env.GIT_REPO}"
             }
         }
 
-        stage('Build and Push Docker Images') {
-            steps {
-                script {
-                    def services = ['frontend-gui', 'backend-api', 'backend-graph', 'backend-csv', 'backend-db', 'backend-exporter']
-                    
-                    services.each { service ->
-                        stage("Build ${service}") {
-                            try {
-                                def imageName = "${DOCKER_USERNAME}/weatherforecastapplication-${service}:latest"
-                                echo "Building image: ${imageName}"
-
-                                // Build the image
-                                docker.build(imageName, "./${service}")
-
-                                // Login to Docker Hub once before pushing all images
-                                if (service == services[0]) {
-                                    withCredentials([usernamePassword(
-                                        credentialsId: "${DOCKER_CREDENTIALS_ID}", 
-                                        passwordVariable: 'DOCKER_PASSWORD', 
-                                        usernameVariable: 'DOCKER_USER'
-                                    )]) {
-                                        sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USER --password-stdin"
-                                    }
-                                }
-
-                                // Push the image
-                                sh "docker push ${imageName}"
-                            } finally {
-                                // Cleanup after each service build
-                                echo "Cleaning up after ${service} build"
-                                sh """
-                                    docker rmi ${DOCKER_USERNAME}/weatherforecastapplication-${service}:latest || true
-                                    docker system prune -af || true
-                                """
-                            }
-                        }
+        stage('Build Docker Images') {
+            stages {
+                stage('Build frontend-gui') {
+                    steps {
+                        buildAndPushService('frontend-gui')
+                    }
+                }
+                stage('Build backend-api') {
+                    steps {
+                        buildAndPushService('backend-api')
+                    }
+                }
+                stage('Build backend-graph') {
+                    steps {
+                        buildAndPushService('backend-graph')
+                    }
+                }
+                stage('Build backend-csv') {
+                    steps {
+                        buildAndPushService('backend-csv')
+                    }
+                }
+                stage('Build backend-db') {
+                    steps {
+                        buildAndPushService('backend-db')
+                    }
+                }
+                stage('Build backend-exporter') {
+                    steps {
+                        buildAndPushService('backend-exporter')
                     }
                 }
             }
@@ -72,7 +74,44 @@ pipeline {
     post {
         always {
             cleanWs()
-            sh 'docker system df' // Show docker disk usage
+            sh 'docker system df'
+            script {
+                currentBuild.description = "Built by ${currentBuild.getBuildCauses()[0].shortDescription}"
+            }
         }
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
+
+def buildAndPushService(String service) {
+    def imageName = "${env.DOCKER_USERNAME}/weatherforecastapplication-${service}:latest"
+    
+    try {
+        echo "Building image: ${imageName}"
+        docker.build(imageName, "./${service}")
+
+        // Login only once
+        if (service == 'frontend-gui') {
+            withCredentials([usernamePassword(
+                credentialsId: "${env.DOCKER_CREDENTIALS_ID}", 
+                passwordVariable: 'DOCKER_PASSWORD', 
+                usernameVariable: 'DOCKER_USER'
+            )]) {
+                sh "echo \$DOCKER_PASSWORD | docker login -u \$DOCKER_USER --password-stdin"
+            }
+        }
+
+        sh "docker push ${imageName}"
+    } finally {
+        echo "Cleaning up after ${service} build"
+        sh """
+            docker rmi ${imageName} || true
+            docker system prune -f --filter 'until=24h' || true
+        """
     }
 }
